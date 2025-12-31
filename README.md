@@ -1,5 +1,9 @@
 # 🦆 RobotDuck 智能语音交互机器人
 
+<img width="1547" height="866" alt="image" src="https://github.com/user-attachments/assets/caf178b6-8df7-41b0-a72d-47dc4d721b0b" />
+
+<img width="1561" height="870" alt="image" src="https://github.com/user-attachments/assets/0f85f778-57d9-441c-a2ab-f7a361369a44" />
+
 基于 XIAO ESP32-S3 Sense 的智能语音交互机器人，集成了表情动画、语音对话、视觉问答、机械臂控制等功能。
 
 ## ✨ 功能特性
@@ -16,6 +20,8 @@
 ---
 
 ## 📦 硬件清单
+<img width="1439" height="872" alt="image" src="https://github.com/user-attachments/assets/1ac002ed-0f35-4130-b84c-3e189a74cf6a" />
+<img width="1120" height="767" alt="image" src="https://github.com/user-attachments/assets/a8eda06f-cea1-4077-8a06-cddb3bac19f8" />
 
 ### 主控板
 | 型号 | 数量 | 说明 |
@@ -26,8 +32,7 @@
 | 型号 | 数量 | 说明 |
 |------|------|------|
 | PCA9685 舵机驱动板 | 1 | 16 通道 PWM 舵机控制 |
-| SG90 舵机 | 12-16 个 | 表情舵机（眼睛、嘴巴、翅膀等） |
-| SCServo SMS_STS 总线舵机 | 4 个 | 机械臂舵机（ID 1-4） |
+| SG90 舵机 | 11 个 | 表情舵机（眼睛、嘴巴、翅膀等） |
 
 ### 音频模块
 | 型号 | 数量 | 说明 |
@@ -39,7 +44,7 @@
 | 型号 | 说明 |
 |------|------|
 | 5V 3A 电源 | 为舵机供电 |
-| 3.3V 稳压 | ESP32 本身供电 |
+| 3.3V 稳压 （同一个5V也行） | ESP32 本身供电 |
 
 ---
 
@@ -83,15 +88,7 @@ MAX98357         XIAO ESP32-S3
   GAIN    ────>    悬空或接 VIN（15dB增益）
 ```
 
-### 3️⃣ SCServo 总线舵机（机械臂）
 
-```
-SCServo 总线     XIAO ESP32-S3
-  TX      ────>    D6 (GPIO43)
-  RX      ────>    D7 (GPIO44)
-  VCC     ────>    6-7.4V（舵机专用电源）
-  GND     ────>    GND（共地）
-```
 
 ### 4️⃣ PCA9685 舵机通道分配
 
@@ -113,15 +110,6 @@ SCServo 总线     XIAO ESP32-S3
 | CH13 | 眼皮眨眼(右) | 130°(关) ~ 50°(张) |
 | CH14 | 眼皮旋转(左) | 45° ~ 135° |
 | CH15 | 眼皮旋转(右) | 45° ~ 135° |
-
-### 5️⃣ 机械臂舵机 ID 配置
-
-| ID | 功能 | 位置范围 | 中位 |
-|----|------|----------|------|
-| 1 | 左右旋转 | 1050 ~ 3000 | 2025 |
-| 2 | 前后俯仰 | 1500 ~ 2500 | 2047 |
-| 3 | 上下俯仰 | 1500 ~ 2500 | 2047 |
-| 4 | 末端 | 1800 ~ 2300 | 2047 |
 
 ---
 
