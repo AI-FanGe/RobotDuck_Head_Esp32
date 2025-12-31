@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ESP32 相机 + 实时语音识别 + IMU 可视化</title>
+<style>
+  :root{
+    --bg:#0b0f14; --card:#121821; --text:#e6edf3; --muted:#9fb0c3;
+    --ok:#7ee787; --err:#ff8080; --line:#1f2937; --panel:rgba(18,24,33,.65);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:linear-gradient(180deg,#0b0f14,#0b0f14 60%,#0e1621);
+    color:var(--text);
+    font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial;
+  }
+
+  /* 两栏布局 */
+  .app{display:grid; grid-template-columns: 1fr 700px; gap:16px; height:100vh; padding:16px}
+  .stage{
+    position:relative; border:1px solid var(--line); border-radius:14px;
+    background:#0a1017; box-shadow:0 10px 30px rgba(0,0,0,.25); overflow:hidden;
+  }
+  .canvas-wrap, #canvas{position:absolute; inset:0; width:100%; height:100%; display:block; background:#000; z-index:10}
+
+  /* 右上角：参数 + 日志 */
+  .tri-panels{
+    position:absolute; right:12px; top:12px; z-index:30;
+    display:grid; grid-template-columns: 1fr 1fr; gap:12px;
+    max-width:min(720px, 60vw);
+  }
+  .box{
+    border:2px dashed rgba(255,255,255,.35); border-radius:12px; padding:10px;
+    background:var(--panel); backdrop-filter: blur(8px) saturate(130%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+  .box h4{margin:0 0 6px 0; font-size:12px; color:#ffd769}
+  .kv{display:flex; justify-content:space-between; align-items:center;
+      border-top:1px dashed rgba(255,255,255,.15); padding-top:6px; margin-top:6px; color:var(--muted); font-size:12px}
+
+  /* 左上角 IMU 浮窗 —— 宽一些 + 横向布局：左模型 / 右数据 */
+  .imu-float{
+    position:absolute; left:12px; top:12px; z-index:35;
+    width: 900px;                /* ← 加长：横向空间更大 */
+    border:2px dashed rgba(255,255,255,.35);
+    border-radius:12px;
+    background:var(--panel);
+    backdrop-filter: blur(8px) saturate(130%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+    padding:10px;
+  }
+  .imu-row{
+    display:grid;
+    grid-template-columns: 1.8fr 1fr;  /* ← 左更宽，右放数据 */
+    gap:12px;
+    align-items:stretch;
+  }
+  #imu_view{
+    position:relative;
+    min-height: 300px;           /* ← 模型区域更高 */
+    background:#0a1017; border-radius:10px;
+  }
+  #imu_hud{
+  border-radius: 10px;
+  background: rgba(18, 24, 33, 0.8);  /* 改为半透明 */
+  border: none;
+  padding: 10px;
+  overflow-y: auto;  /* 启用垂直滚动条 */
+  max-height: 100vh;  /* 设置最大高度为视口高度，自动撑满 */
+}
+
+#imu_hud::-webkit-scrollbar {
+  width: 8px;  /* 滚动条的宽度 */
+}
+
+#imu_hud::-webkit-scrollbar-thumb {
+  background-color: #2a6df4;  /* 滑块的颜色 */
+  border-radius: 4px;  /* 滑块的圆角 */
+}
+
+#imu_hud::-webkit-scrollbar-track {
+  background-color: #111a2e;  /* 滚动条轨道的颜色 */
+  border-radius: 4px;  /* 滚动条轨道的圆角 */
+}
+
+  #imu_top_status{position:absolute; top:10px; right:10px; z-index:2}
+  #imu_top_status .badge{background:rgba(0,0,0,.35); border-color:#2d3b50}
+
+  /* 角标 + 当前指令（角标在浮窗下） */
+  .badge-tag{
+    position:absolute; left:12px; top: calc(12px + 300px + 28px); z-index:20;
+    background:linear-gradient(120deg, rgba(47,134,255,.9), rgba(26,88,255,.9));
+    color:#fff; padding:6px 10px; font-weight:700; font-size:12px; border-radius:999px;
+    box-shadow:0 6px 16px rgba(47,134,255,.35)
+  }
+  .command{
+    position:absolute; left:50%; bottom:46px; transform:translateX(-50%); z-index:25;
+    display:flex; gap:10px; align-items:center; padding:12px 18px; border-radius:999px;
+    background:rgba(18,24,33,.75); border:1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(8px) saturate(140%); box-shadow:0 12px 28px rgba(0,0,0,.6)
+  }
+  .dot{width:9px; height:9px; border-radius:50%; background:#2f86ff; box-shadow:0 0 16px #2f86ff}
+
+  /* 右侧聊天（左右气泡） */
+  .chat {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    height: 100vh; /* 确保 .chat 容器占据整个视口高度 */
+  }
+
+  .chat-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .badges{display:flex;gap:10px;flex-wrap:wrap}
+  .badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid #2d3b50;color:var(--muted)}
+  .ok{color:var(--ok);border-color:var(--ok)} .err{color:var(--err);border-color:var(--err)}
+  .chat-list {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0; /* 确保 .chat-list 不会被外部内容撑大 */
+  }
+
+  .live{padding:12px;border:1px dashed #2d3b50;border-radius:12px;background:#0c121a}
+  .live h2{margin:0 0 8px 0;font-size:14px;color:var(--muted);font-weight:600}
+  .partial{font-size:20px;min-height:2.2em;letter-spacing:.2px}
+
+  .finals {
+    padding: 12px;
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    background: #0c121a;
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* 使用 flex: 1 而不是 flex-grow: 1 */
+    min-height: 0; /* 允许收缩到小于内容高度 */
+  }
+  .finals h2{margin:0 0 8px 0;font-size:14px;color:var(--muted);font-weight:600}
+  .finals ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .bubble{max-width:82%; padding:10px 12px; border-radius:14px; border:1px solid #1f2937}
+  .from-bot{align-self:flex-start; background:#0d1729}
+  .from-me {align-self:flex-end;   background:#12263a}
+
+  .controls{display:flex;gap:8px}
+  button{background:#1f6feb;border:1px solid #1f6feb;color:#fff;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer}
+  .ghost{background:transparent;border-color:#304057;color:#9fb0c3}
+  
+  /* 表情控制面板 */
+  .expr-panel{
+    padding:12px;
+    border-bottom:1px solid var(--line);
+    background:rgba(15,20,28,.6);
+  }
+  .expr-panel h3{
+    margin:0 0 10px 0;
+    font-size:14px;
+    color:#ffd769;
+    font-weight:600;
+  }
+  .expr-buttons{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .expr-btn{
+    background:linear-gradient(145deg, #1a2633, #0d1620);
+    border:1px solid #2d3b50;
+    color:#c8d4e0;
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    transition:all 0.2s ease;
+  }
+  .expr-btn:hover{
+    background:linear-gradient(145deg, #2a3e52, #1a2a3c);
+    border-color:#3d5570;
+    color:#fff;
+    transform:translateY(-1px);
+    box-shadow:0 4px 12px rgba(0,0,0,.3);
+  }
+  .expr-btn:active{
+    transform:translateY(0);
+    box-shadow:none;
+  }
+  .expr-btn.active{
+    background:linear-gradient(145deg, #1f6feb, #1858c7);
+    border-color:#2f86ff;
+    color:#fff;
+  }
+
+  /* 人脸追踪浮窗 */
+  .face-track-float{
+    position:absolute; left:12px; top:12px; z-index:35;
+    width: 320px;
+    border:2px solid rgba(46,204,113,.5);
+    border-radius:12px;
+    background:rgba(18,24,33,.85);
+    backdrop-filter: blur(8px);
+    padding:12px;
+  }
+  .face-track-float h4{
+    margin:0 0 8px 0;
+    font-size:14px;
+    color:#2ecc71;
+  }
+  .face-track-status{
+    display:flex;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .face-track-log{
+    font-size:11px;
+    color:#9fb0c3;
+    background:rgba(0,0,0,.3);
+    padding:6px 8px;
+    border-radius:6px;
+    font-family:monospace;
+    word-break:break-all;
+  }
+  .face-detected{border-color:#2ecc71 !important}
+  .face-lost{border-color:#e74c3c !important}
+  
+  /* 隐藏但保留：校准/滑杆（供 main.js 使用） */
+  .hidden-controls{display:none}
+
+  @media (max-width:1100px){
+    .app{grid-template-columns:1fr; height:auto}
+    .chat{height:60vh}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- 左侧主舞台 -->
+  <section class="stage">
+    <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
+
+    <!-- 左上角：人脸追踪状态浮窗 -->
+    <div class="face-track-float" id="faceTrackPanel">
+      <h4>👁️ 眼球追踪</h4>
+      <div class="face-track-status">
+        <span class="badge" id="faceStatus">人脸: 未检测</span>
+        <span class="badge" id="eyeAngles">眼球: LR=85 UD=90</span>
+      </div>
+      <div class="face-track-log" id="faceLog">等待检测...</div>
+    </div>
+
+
+
+  </section>
+
+  <!-- 右侧聊天 -->
+  <aside class="chat">
+    <div class="chat-head">
+      <div class="badges">
+        <span id="camStatus" class="badge">Camera: connecting…</span>
+        <span id="asrStatus" class="badge">ASR: connecting…</span>
+        <span id="fps" class="badge">FPS: --</span>
+      </div>
+      <div class="controls">
+        <button class="ghost" id="btnClear">清空 Final</button>
+        <button id="btnReconnect">重连</button>
+      </div>
+    </div>
+    
+    <!-- 表情控制面板（与 test.py 一致）-->
+    <div class="expr-panel">
+      <h3>🎭 表情控制</h3>
+      <div class="expr-buttons">
+        <button class="expr-btn" data-expr="idle" title="待机-眨眼+眼球移动+嘴巴卖萌">😊 待机</button>
+        <button class="expr-btn" data-expr="happy" title="开心-眯眼+眼皮上斜+嘴巴张开">😄 开心</button>
+        <button class="expr-btn" data-expr="sad" title="伤心-眼皮下斜+眼球向下">😢 伤心</button>
+        <button class="expr-btn" data-expr="angry" title="生气-眼皮上斜+快速扫视">😠 生气</button>
+        <button class="expr-btn" data-expr="speechless" title="无语-翻白眼">😑 无语</button>
+        <button class="expr-btn" data-expr="wink" title="Wink-单眼眨眼">😉 Wink</button>
+        <button class="expr-btn" data-expr="normal" title="复位-所有舵机回中位">😐 复位</button>
+        <button class="expr-btn" data-expr="test" title="测试-眼球转动+眨眼+嘴巴开合" style="background:linear-gradient(145deg, #8b5cf6, #6d28d9);border-color:#a78bfa;">🔧 测试</button>
+      </div>
+    </div>
+    
+    <div class="chat-list">
+      <div class="live">
+        <h2>流式识别（Partial）</h2>
+        <div class="partial" id="partial">（等待音频…）</div>
+      </div>
+      <div class="finals">
+        <h2>最终文本（Final）</h2>
+        <ul id="finalList"></ul>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- 隐藏但保留：校准/滑杆（供 main.js 使用） -->
+<div class="hidden-controls">
+  <button id="btn_zero"></button><button id="btn_reset"></button><button id="btn_bias_now"></button>
+  <input id="auto_rezero" type="checkbox" checked /><input id="auto_bias" type="checkbox" checked />
+  <input id="use_proj" type="checkbox" checked /><input id="freeze_still" type="checkbox" checked />
+  <select id="medn"><option>3</option><option selected>5</option><option>7</option></select>
+  <select id="ang_ema"><option value="0">0</option><option value="0.15" selected>0.15</option><option value="0.30">0.30</option><option value="0.5">0.5</option></select>
+  <select id="grav_beta"><option value="0.95">0.95</option><option value="0.97">0.97</option><option value="0.98" selected>0.98</option><option value="0.99">0.99</option></select>
+  <select id="yaw_db"><option value="0.05">0.05</option><option value="0.08" selected>0.08</option><option value="0.15">0.15</option><option value="0.30">0.30</option></select>
+  <select id="still_w"><option value="0.4" selected>0.4</option><option value="0.6">0.6</option><option value="1.0">1.0</option></select>
+  <select id="yaw_leak"><option value="0">0</option><option value="0.1">0.1</option><option value="0.2" selected>0.2</option><option value="0.5">0.5</option></select>
+  <input id="roll_sl" type="range"><span id="roll_val"></span>
+  <input id="pitch_sl" type="range"><span id="pitch_val"></span>
+  <input id="yaw_sl" type="range"><span id="yaw_val"></span>
+  <input id="gx_sl" type="range"><span id="gx_val"></span>
+  <input id="gy_sl" type="range"><span id="gy_val"></span>
+  <input id="gz_sl" type="range"><span id="gz_val"></span>
+  <input id="ax_sl" type="range"><span id="ax_val"></span>
+  <input id="ay_sl" type="range"><span id="ay_val"></span>
+  <input id="az_sl" type="range"><span id="az_val"></span>
+</div>
+
+<!-- three.js importmap -->
+<script type="importmap">{
+  "imports": { "three": "https://unpkg.com/three@0.155.0/build/three.module.js" }
+}</script>
+
+<!-- 主脚本 -->
+<script type="module" src="/static/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+/* 科技感配色方案 */
+:root {
+  --tech-bg: #0a0e1b;
+  --tech-card: #111827;
+  --tech-border: #1e293b;
+  --tech-primary: #3b82f6;
+  --tech-secondary: #8b5cf6;
+  --tech-accent: #06b6d4;
+  --tech-success: #10b981;
+  --tech-warning: #f59e0b;
+  --tech-text: #e0e7ff;
+  --tech-muted: #94a3b8;
+  --glow-primary: 0 0 30px rgba(59, 130, 246, 0.5);
+  --glow-secondary: 0 0 30px rgba(139, 92, 246, 0.5);
+}
+
+/* 视觉识别画布容器 */
+.vision-container {
+  position: relative;
+  background: var(--tech-bg);
+  border: 1px solid var(--tech-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+.vision-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 覆盖层 */
+.vision-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* HUD样式 */
+.hud-element {
+  position: absolute;
+  color: var(--tech-text);
+  font-family: 'Inter', 'Noto Sans SC', sans-serif;
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+}
+
+/* 状态指示器 */
+.status-indicator {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 12px 24px;
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid var(--tech-primary);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--glow-primary);
+}
+
+.status-main {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--tech-primary);
+  margin-bottom: 4px;
+}
+
+.status-sub {
+  font-size: 12px;
+  color: var(--tech-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 进度条 */
+.progress-container {
+  position: absolute;
+  bottom: 40px;
+  left: 20px;
+  width: 300px;
+}
+
+.progress-item {
+  margin-bottom: 20px;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.progress-label-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.progress-label-sub {
+  font-size: 11px;
+  color: var(--tech-muted);
+  margin-left: 8px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--tech-primary), var(--tech-accent));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+}
+
+/* 手部追踪样式 */
+.hand-skeleton {
+  stroke: var(--tech-accent);
+  stroke-width: 2;
+  fill: none;
+  filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.8));
+}
+
+.hand-joint {
+  fill: var(--tech-accent);
+  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 1));
+}
+
+/* 目标锁定样式 */
+.target-lock {
+  stroke: var(--tech-success);
+  stroke-width: 3;
+  fill: none;
+  stroke-dasharray: 10 5;
+  animation: rotate 20s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.8));
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 闪烁动画 */
+.flash-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, transparent 0%, rgba(139, 92, 246, 0.3) 100%);
+  animation: flash-pulse 1s ease-in-out;
+}
+
+@keyframes flash-pulse {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* 数据显示面板 */
+.data-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid var(--tech-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+  min-width: 200px;
+}
+
+.data-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.data-label {
+  color: var(--tech-muted);
+}
+
+.data-value {
+  color: var(--tech-text);
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+} 

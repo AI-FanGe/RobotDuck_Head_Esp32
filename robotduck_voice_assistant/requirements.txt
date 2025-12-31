@@ -1,0 +1,1 @@
+pip install dashscope openai python-dotenv sounddevice numpy opencv-python oss2

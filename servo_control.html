@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32舵机控制系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .servo-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .servo-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .servo-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .servo-item.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .servo-checkbox {
+            margin-bottom: 10px;
+        }
+        
+        .servo-checkbox input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .servo-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .servo-slider:hover {
+            opacity: 1;
+        }
+        
+        .servo-slider::-webkit-slider-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+        
+        .angle-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 5px;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .control-group h3 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .mirror-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .mirror-controls select {
+            padding: 10px;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+            font-size: 1em;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .slider-container label {
+            min-width: 120px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 10px;
+        }
+        
+        .slider-container .value {
+            min-width: 50px;
+            text-align: right;
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .action-editor {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .action-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .action-frame {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            position: relative;
+        }
+        
+        .action-frame h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .action-frame .servo-angles {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .action-frame .duration {
+            color: #888;
+            font-size: 0.9em;
+        }
+        
+        .action-frame .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #eb3349;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        
+        .action-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .action-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        
+        .saved-sequences {
+            margin-top: 20px;
+        }
+        
+        .sequence-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .sequence-item h4 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .sequence-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .status-bar {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 30px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        
+        .status-bar.playing {
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 ESP32舵机控制系统</h1>
+            <p>支持单舵机、镜像、多选控制和动作编排</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- 左侧：单舵机控制 -->
+            <div class="panel">
+                <h2>🎛️ 单舵机控制 (0-15)</h2>
+                <div class="servo-grid" id="servoGrid"></div>
+            </div>
+            
+            <!-- 右侧：组合控制 -->
+            <div class="panel">
+                <h2>🔗 组合控制</h2>
+                
+                <!-- 镜像控制 -->
+                <div class="control-group">
+                    <h3>镜像控制</h3>
+                    <div class="mirror-controls">
+                        <div>
+                            <label>通道A:</label>
+                            <select id="mirrorA">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8" selected>8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                                <option value="13">13</option>
+                                <option value="14">14</option>
+                                <option value="15">15</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>通道B:</label>
+                            <select id="mirrorB">
+                                <option value="0">0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9" selected>9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                                <option value="13">13</option>
+                                <option value="14">14</option>
+                                <option value="15">15</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="slider-container">
+                        <label>角度:</label>
+                        <input type="range" min="0" max="180" value="90" id="mirrorSlider">
+                        <span class="value" id="mirrorValue">90°</span>
+                    </div>
+                </div>
+                
+                <!-- 多选控制 -->
+                <div class="control-group">
+                    <h3>多选控制</h3>
+                    <p style="color: #888; margin-bottom: 10px;">勾选下方单舵机控制面板中的舵机</p>
+                    <div class="slider-container">
+                        <label>统一角度:</label>
+                        <input type="range" min="0" max="180" value="90" id="groupSlider">
+                        <span class="value" id="groupValue">90°</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="applyGroupAngle()" style="margin-top: 10px; width: 100%;">应用到选中舵机</button>
+                </div>
+            </div>
+            
+            <!-- 动作编排 -->
+            <div class="panel full-width">
+                <h2>🎬 动作编排</h2>
+                <div class="action-editor">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <!-- 当前动作编辑 -->
+                        <div>
+                            <h3>当前帧</h3>
+                            <div style="background: #f0f4ff; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                    <input type="number" id="duration" class="action-input" placeholder="持续时间(ms)" value="1000" min="100" max="10000" step="100">
+                                </div>
+                                <button class="btn btn-success" onclick="captureCurrentState()" style="width: 100%;">📸 捕获当前舵机状态</button>
+                            </div>
+                            
+                            <h3>动作序列</h3>
+                            <div class="action-list" id="actionList"></div>
+                            
+                            <div class="action-controls">
+                                <input type="text" id="sequenceName" class="action-input" placeholder="动作序列名称">
+                                <button class="btn btn-primary" onclick="saveSequence()">💾 保存序列</button>
+                                <button class="btn btn-danger" onclick="clearSequence()">🗑️ 清空</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 已保存的序列 -->
+                        <div>
+                            <h3>已保存序列</h3>
+                            <div class="saved-sequences" id="savedSequences"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar" id="statusBar">
+            就绪
+        </div>
+    </div>
+
+    <script>
+        // 全局状态
+        const servoAngles = {};
+        const selectedServos = new Set();
+        let currentSequence = [];
+        let ws = null;
+        
+        // 初始化
+        function init() {
+            // 创建16个舵机控制
+            const grid = document.getElementById('servoGrid');
+            for (let i = 0; i < 16; i++) {
+                servoAngles[i] = 90;
+                
+                const item = document.createElement('div');
+                item.className = 'servo-item';
+                item.id = `servo-${i}`;
+                item.innerHTML = `
+                    <div class="servo-checkbox">
+                        <input type="checkbox" id="check-${i}" onchange="toggleServo(${i})">
+                        <label for="check-${i}">舵机 ${i}</label>
+                    </div>
+                    <input type="range" class="servo-slider" min="0" max="180" value="90" 
+                           id="slider-${i}" oninput="updateServo(${i}, this.value)">
+                    <div class="angle-display" id="angle-${i}">90°</div>
+                `;
+                grid.appendChild(item);
+            }
+            
+            // 镜像控制
+            const mirrorSlider = document.getElementById('mirrorSlider');
+            mirrorSlider.oninput = function() {
+                document.getElementById('mirrorValue').textContent = this.value + '°';
+                applyMirror(parseInt(this.value));
+            };
+            
+            // 组控制
+            const groupSlider = document.getElementById('groupSlider');
+            groupSlider.oninput = function() {
+                document.getElementById('groupValue').textContent = this.value + '°';
+            };
+            
+            // 加载保存的序列
+            loadSavedSequences();
+            
+            // 建立WebSocket连接
+            connectWebSocket();
+        }
+        
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'action_status') {
+                    updateStatus(`正在播放: ${data.name}`, true);
+                } else if (data.type === 'action_complete') {
+                    updateStatus(`播放完成: ${data.name}`);
+                }
+            };
+            ws.onerror = function() {
+                console.log('WebSocket连接失败');
+            };
+        }
+        
+        function toggleServo(ch) {
+            const checkbox = document.getElementById(`check-${ch}`);
+            const item = document.getElementById(`servo-${ch}`);
+            if (checkbox.checked) {
+                selectedServos.add(ch);
+                item.classList.add('selected');
+            } else {
+                selectedServos.delete(ch);
+                item.classList.remove('selected');
+            }
+        }
+        
+        async function updateServo(ch, angle) {
+            servoAngles[ch] = parseInt(angle);
+            document.getElementById(`angle-${ch}`).textContent = angle + '°';
+            
+            // 发送到ESP32
+            try {
+                await fetch(`/api/servo/set?ch=${ch}&angle=${angle}`, { method: 'POST' });
+            } catch (e) {
+                console.error('设置舵机失败:', e);
+            }
+        }
+        
+        async function applyMirror(angle) {
+            const chA = parseInt(document.getElementById('mirrorA').value);
+            const chB = parseInt(document.getElementById('mirrorB').value);
+            
+            try {
+                await fetch(`/api/servo/mirror?ch_a=${chA}&ch_b=${chB}&angle=${angle}`, { method: 'POST' });
+                
+                // 更新UI
+                document.getElementById(`slider-${chA}`).value = angle;
+                document.getElementById(`angle-${chA}`).textContent = angle + '°';
+                servoAngles[chA] = angle;
+                
+                const angleB = 180 - angle;
+                document.getElementById(`slider-${chB}`).value = angleB;
+                document.getElementById(`angle-${chB}`).textContent = angleB + '°';
+                servoAngles[chB] = angleB;
+            } catch (e) {
+                console.error('镜像控制失败:', e);
+            }
+        }
+        
+        async function applyGroupAngle() {
+            const angle = parseInt(document.getElementById('groupSlider').value);
+            const channels = Array.from(selectedServos);
+            
+            if (channels.length === 0) {
+                alert('请先选择要控制的舵机');
+                return;
+            }
+            
+            try {
+                await fetch('/api/servo/set_multiple', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channels, angle })
+                });
+                
+                // 更新UI
+                channels.forEach(ch => {
+                    document.getElementById(`slider-${ch}`).value = angle;
+                    document.getElementById(`angle-${ch}`).textContent = angle + '°';
+                    servoAngles[ch] = angle;
+                });
+                
+                updateStatus(`已设置 ${channels.length} 个舵机到 ${angle}°`);
+            } catch (e) {
+                console.error('组控制失败:', e);
+            }
+        }
+        
+        function captureCurrentState() {
+            const duration = parseInt(document.getElementById('duration').value);
+            const servos = {};
+            
+            // 捕获所有舵机当前角度
+            for (let i = 0; i < 16; i++) {
+                servos[i] = servoAngles[i];
+            }
+            
+            currentSequence.push({ servos, duration });
+            renderActionList();
+            updateStatus(`已添加第 ${currentSequence.length} 帧`);
+        }
+        
+        function renderActionList() {
+            const list = document.getElementById('actionList');
+            list.innerHTML = '';
+            
+            currentSequence.forEach((action, index) => {
+                const frame = document.createElement('div');
+                frame.className = 'action-frame';
+                
+                let anglesHtml = '<div class="servo-angles">';
+                for (let i = 0; i < 16; i++) {
+                    anglesHtml += `<span>${i}:${action.servos[i]}°</span>`;
+                }
+                anglesHtml += '</div>';
+                
+                frame.innerHTML = `
+                    <button class="delete-btn" onclick="deleteFrame(${index})">删除</button>
+                    <h4>帧 ${index + 1}</h4>
+                    ${anglesHtml}
+                    <div class="duration">持续时间: ${action.duration}ms</div>
+                `;
+                list.appendChild(frame);
+            });
+        }
+        
+        function deleteFrame(index) {
+            currentSequence.splice(index, 1);
+            renderActionList();
+        }
+        
+        function clearSequence() {
+            if (confirm('确定要清空当前序列吗？')) {
+                currentSequence = [];
+                renderActionList();
+                updateStatus('序列已清空');
+            }
+        }
+        
+        async function saveSequence() {
+            const name = document.getElementById('sequenceName').value.trim();
+            if (!name) {
+                alert('请输入序列名称');
+                return;
+            }
+            
+            if (currentSequence.length === 0) {
+                alert('序列为空，请先添加动作帧');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/action/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, actions: currentSequence })
+                });
+                
+                if (response.ok) {
+                    updateStatus(`序列 "${name}" 已保存`);
+                    document.getElementById('sequenceName').value = '';
+                    currentSequence = [];
+                    renderActionList();
+                    loadSavedSequences();
+                }
+            } catch (e) {
+                console.error('保存序列失败:', e);
+            }
+        }
+        
+        async function loadSavedSequences() {
+            try {
+                const response = await fetch('/api/action/list');
+                const data = await response.json();
+                
+                const container = document.getElementById('savedSequences');
+                container.innerHTML = '';
+                
+                for (const [name, info] of Object.entries(data.sequences)) {
+                    const item = document.createElement('div');
+                    item.className = 'sequence-item';
+                    item.innerHTML = `
+                        <div>
+                            <h4>${name}</h4>
+                            <p style="color: #888; font-size: 0.9em;">${info.count} 帧</p>
+                        </div>
+                        <div class="sequence-buttons">
+                            <button class="btn btn-info" onclick="playSequence('${name}', false)">▶️ 播放</button>
+                            <button class="btn btn-success" onclick="playSequence('${name}', true)">🔁 循环</button>
+                            <button class="btn btn-primary" onclick="loadSequence('${name}')">📝 编辑</button>
+                            <button class="btn btn-danger" onclick="deleteSequence('${name}')">🗑️</button>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                }
+            } catch (e) {
+                console.error('加载序列列表失败:', e);
+            }
+        }
+        
+        async function playSequence(name, loop) {
+            try {
+                await fetch(`/api/action/play/${name}?loop=${loop}`, { method: 'POST' });
+                updateStatus(`开始播放: ${name}${loop ? ' (循环)' : ''}`, true);
+            } catch (e) {
+                console.error('播放序列失败:', e);
+            }
+        }
+        
+        async function loadSequence(name) {
+            try {
+                const response = await fetch(`/api/action/get/${name}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentSequence = data.actions;
+                    document.getElementById('sequenceName').value = name;
+                    renderActionList();
+                    updateStatus(`已加载序列: ${name}`);
+                }
+            } catch (e) {
+                console.error('加载序列失败:', e);
+            }
+        }
+        
+        async function deleteSequence(name) {
+            if (!confirm(`确定要删除序列 "${name}" 吗？`)) return;
+            
+            try {
+                await fetch(`/api/action/delete/${name}`, { method: 'DELETE' });
+                updateStatus(`已删除序列: ${name}`);
+                loadSavedSequences();
+            } catch (e) {
+                console.error('删除序列失败:', e);
+            }
+        }
+        
+        function updateStatus(message, playing = false) {
+            const bar = document.getElementById('statusBar');
+            bar.textContent = message;
+            if (playing) {
+                bar.classList.add('playing');
+            } else {
+                bar.classList.remove('playing');
+                setTimeout(() => {
+                    bar.textContent = '就绪';
+                }, 3000);
+            }
+        }
+        
+        // 页面加载完成后初始化
+        window.onload = init;
+    </script>
+</body>
+</html>
+

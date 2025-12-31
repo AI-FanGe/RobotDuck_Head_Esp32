@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Runtime files
+runtime/
+*.jpg
+*.png
+*.mp4
+*.avi
+*.wav
+*.mp3
+
+# Model files (large files)
+*.pt
+*.onnx
+*.task
+model/
+robotduck_arm/models/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+

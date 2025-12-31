@@ -1,0 +1,29 @@
+# Web框架
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+starlette>=0.35.0
+
+# 基础图像处理（相机画面）
+opencv-python>=4.9.0
+numpy>=1.24.0
+
+# 阿里云服务（AI对话、ASR）
+dashscope>=1.14.0
+python-dotenv>=1.0.0
+
+# OpenAI客户端（用于Omni模型）
+openai>=1.0.0
+
+# 音频处理
+pyaudio>=0.2.14
+audioop-lts>=0.2.1  # Python 3.13+ 需要
+scipy>=1.11.0  # 唐老鸭变声器
+
+# 网络通信
+websockets>=12.0
+aiohttp>=3.9.0
+
+# 其他工具
+Pillow>=10.2.0
+requests>=2.31.0
