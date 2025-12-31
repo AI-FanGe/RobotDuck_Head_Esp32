@@ -20,12 +20,12 @@ runtime/
 *.wav
 *.mp3
 
-# Model files (large files)
-*.pt
-*.onnx
-*.task
-model/
-robotduck_arm/models/
+# Model files (uncomment if models are too large)
+# *.pt
+# *.onnx
+# *.task
+# model/
+# robotduck_arm/models/
 
 # IDE
 .vscode/
